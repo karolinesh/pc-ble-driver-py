@@ -446,6 +446,9 @@ class BLEGapAddr(object):
         )
 
     def __init__(self, addr_type, addr):
+        """
+        :type addr_type: BLEGapAddr.Types
+        """
         assert isinstance(addr_type, BLEGapAddr.Types), "Invalid argument type"
         self.addr_type = addr_type
         self.addr = addr
@@ -1733,6 +1736,9 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def open(self):
+        """ Opens the connection to the BLE device.
+            Must be called prior to performing any BLE operations
+        """
         self.run_workers = True
 
         self.log_worker = Thread(
@@ -1763,6 +1769,8 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def close(self):
+        """ Closes the connection to the BLE device
+        """
         result = driver.sd_rpc_close(self.rpc_adapter)
         logger.debug("close result %s", result)
 
@@ -1813,14 +1821,20 @@ class BLEDriver(object):
 
     @staticmethod
     def adv_params_setup():
+        """ Set up default advertising parameters
+        """
         return BLEGapAdvParams(interval_ms=40, timeout_s=180)
 
     @staticmethod
     def scan_params_setup():
+        """ Set up default scanning parameters
+        """
         return BLEGapScanParams(interval_ms=200, window_ms=150, timeout_s=10)
 
     @staticmethod
     def conn_params_setup():
+        """ Set up default connection parameters
+        """
         return BLEGapConnParams(
             min_conn_interval_ms=15,
             max_conn_interval_ms=30,
@@ -1860,6 +1874,10 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_addr_set(self, gap_addr):
+        """ Sets the given address
+            :param gap_addr: Address to be set
+            :type gap_addr: BLEGapAddr
+        """
         assert isinstance(gap_addr, BLEGapAddr), "Invalid argument type"
         if gap_addr:
             gap_addr = gap_addr.to_c()
@@ -1870,6 +1888,8 @@ class BLEDriver(object):
 
     @wrapt.synchronized(api_lock)
     def ble_gap_addr_get(self):
+        """ Gets the address of the device
+        """
         address = BLEGapAddr(BLEGapAddr.Types.public, [0] * 6)
         addr = address.to_c()
         if nrf_sd_ble_api_ver >= 3:
@@ -1885,6 +1905,10 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_privacy_set(self, privacy_params):
+        """ Sets the given privacy parameters.
+            :param privacy_params: Privacy parameters
+            :type privacy_params: BLEGapPrivacyParams
+        """
         assert isinstance(privacy_params, BLEGapPrivacyParams), "Invalid argument type"
         privacy_params = privacy_params.to_c()
         return driver.sd_ble_gap_privacy_set(self.rpc_adapter, privacy_params)
@@ -1892,6 +1916,10 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_adv_start(self, adv_params=None, tag=0):
+        """ Starts advertising with the given parameters. If none given, will use the default
+            :param adv_params: Advertising parameters
+            :type adv_params: BLEGapAdvParams
+        """
         if not adv_params:
             adv_params = self.adv_params_setup()
         assert isinstance(adv_params, BLEGapAdvParams), "Invalid argument type"
@@ -1903,6 +1931,10 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_conn_param_update(self, conn_handle, conn_params):
+        """ Updates given connection parameters. If none given, will use the default.
+            :param conn_params: Connection parameters
+            :type conn_params: BLEGapConnParams
+        """
         assert isinstance(
             conn_params, (BLEGapConnParams, type(None))
         ), "Invalid argument type"
@@ -1915,11 +1947,17 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_adv_stop(self):
+        """ Stops advertising
+        """
         return driver.sd_ble_gap_adv_stop(self.rpc_adapter)
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_scan_start(self, scan_params=None):
+        """ Starts scanning with the given parameters. If none given, will use the default
+            :param scan_params: Advertising parameters
+            :type scan_params: BLEGapScanParams
+        """
         if not scan_params:
             scan_params = self.scan_params_setup()
         assert isinstance(scan_params, BLEGapScanParams), "Invalid argument type"
@@ -1928,11 +1966,24 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_scan_stop(self):
+        """ Stops an active scan
+        """
         return driver.sd_ble_gap_scan_stop(self.rpc_adapter)
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_connect(self, address, scan_params=None, conn_params=None, tag=0):
+        """ Initiates a connection to a peripheral peer with the specified connection parameters, or uses the default
+            connection parameters if not specified. The connection will not be complete until the returned waitable
+            either times out or reports the newly connected peer
+
+            :param address: The address of the peer to connect to
+            :type address: BLEGapAddr
+            :param scan_params: Optional scanning parameters to use. If not specified, uses the set default
+            :type scan_params: BLEGapScanParams
+            :param conn_params: Optional connection parameters to use. If not specified, uses the set default
+            :type conn_params: BLEGapConnParams
+        """
         assert isinstance(address, BLEGapAddr), "Invalid argument type"
 
         if not scan_params:
@@ -1961,6 +2012,8 @@ class BLEDriver(object):
     def ble_gap_disconnect(
         self, conn_handle, hci_status_code=BLEHci.remote_user_terminated_connection
     ):
+        """ Disconnect from a peripheral peer.
+        """
         assert isinstance(hci_status_code, BLEHci), "Invalid argument type"
         return driver.sd_ble_gap_disconnect(
             self.rpc_adapter, conn_handle, hci_status_code.value
@@ -1969,6 +2022,8 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_adv_data_set(self, adv_data=BLEAdvData(), scan_data=BLEAdvData()):
+        """ Set Advertising Data.
+        """
         assert isinstance(adv_data, BLEAdvData), "Invalid argument type"
         assert isinstance(scan_data, BLEAdvData), "Invalid argument type"
         (adv_data_len, p_adv_data) = adv_data.to_c()
@@ -1981,6 +2036,10 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_authenticate(self, conn_handle, sec_params):
+        """ Initiate the GAP Authentication procedure.
+            In the central role, this function will send an SMP Pairing Request (or an SMP Pairing Failed if rejected),
+            otherwise in the peripheral role, an SMP Security Request will be sent.
+        """
         assert isinstance(
             sec_params, (BLEGapSecParams, type(None))
         ), "Invalid argument type"
@@ -1993,6 +2052,8 @@ class BLEDriver(object):
     def ble_gap_sec_params_reply(
         self, conn_handle, sec_status, sec_params, own_keys=None, peer_keys=None
     ):
+        """ Reply with Security Parameters.
+        """
         assert isinstance(sec_status, BLEGapSecStatus), "Invalid argument type"
         assert isinstance(
             sec_params, (BLEGapSecParams, type(None))
@@ -2025,12 +2086,16 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_sec_info_reply(self, conn_handle, enc_info, id_info, sign_info):
+        """ Reply with Security Information.
+        """
         return driver.sd_ble_gap_sec_info_reply(
             self.rpc_adapter, conn_handle, enc_info, id_info, sign_info
         )
 
     @wrapt.synchronized(api_lock)
     def ble_gap_conn_sec_get(self, conn_handle):
+        """ Obtain connection security level.
+        """
         conn_sec = driver.ble_gap_conn_sec_t()
         conn_sec.sec_mode = driver.ble_gap_conn_sec_mode_t()
         err_code = driver.sd_ble_gap_conn_sec_get(
@@ -2045,6 +2110,10 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_encrypt(self, conn_handle, master_id, enc_info):
+        """ Initiate encryption procedure.
+            :type master_id: BLEGapMasterId
+            :type enc_info: BLEGapEncInfo
+        """
         assert isinstance(master_id, BLEGapMasterId), "Invalid argument type"
         assert isinstance(enc_info, BLEGapEncInfo), "Invalid argument type"
         return driver.sd_ble_gap_encrypt(
@@ -2056,6 +2125,8 @@ class BLEDriver(object):
     def ble_gap_data_length_update(
         self, conn_handle, data_length_params, data_length_limitation
     ):
+        """ Initiate to a Data Length Update Procedure.
+        """
         assert isinstance(data_length_params, (BLEGapDataLengthParams, type(None)))
         assert isinstance(
             data_length_limitation, (BLEGapDataLengthLimitation, type(None))
@@ -2076,6 +2147,8 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_rssi_start(self, conn_handle, threshold_dbm, skip_count):
+        """ Start reporting of changes in RSSI
+        """
         return driver.sd_ble_gap_rssi_start(
             self.rpc_adapter, conn_handle, threshold_dbm, skip_count
         )
@@ -2083,11 +2156,15 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_rssi_stop(self, conn_handle):
+        """ Stop reporting of changes in RSSI.
+        """
         return driver.sd_ble_gap_rssi_stop(self.rpc_adapter, conn_handle)
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_phy_update(self, conn_handle, gap_phys):
+        """ Initiate PHY Update procedure
+        """
         assert isinstance(gap_phys, BLEGapPhys)
         gap_phys = gap_phys.to_c()
         err_code = driver.sd_ble_gap_phy_update(self.rpc_adapter, conn_handle, gap_phys)
@@ -2157,6 +2234,9 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gattc_exchange_mtu_req(self, conn_handle, mtu):
+        ''' Starts an ATT_MTU exchange by sending an Exchange MTU Request to the server
+            mtu = client_rx_mtu
+        '''
         return driver.sd_ble_gattc_exchange_mtu_request(
             self.rpc_adapter, conn_handle, mtu
         )
@@ -2204,6 +2284,9 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gatts_exchange_mtu_reply(self, conn_handle, mtu):
+        ''' Reply to an ATT_MTU exchange request by sending an Exchange MTU Response to the client
+            mtu = server_rx_mtu
+        '''
         return driver.sd_ble_gatts_exchange_mtu_reply(
             self.rpc_adapter, conn_handle, mtu
         )
