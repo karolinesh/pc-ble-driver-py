@@ -441,9 +441,8 @@ class BLEGapAddr(object):
         public = driver.BLE_GAP_ADDR_TYPE_PUBLIC
         random_static = driver.BLE_GAP_ADDR_TYPE_RANDOM_STATIC
         random_private_resolvable = driver.BLE_GAP_ADDR_TYPE_RANDOM_PRIVATE_RESOLVABLE
-        random_private_non_resolvable = (
-            driver.BLE_GAP_ADDR_TYPE_RANDOM_PRIVATE_NON_RESOLVABLE
-        )
+        random_private_non_resolvable = driver.BLE_GAP_ADDR_TYPE_RANDOM_PRIVATE_NON_RESOLVABLE
+        fhgfh = 127
 
     def __init__(self, addr_type, addr):
         """
@@ -548,6 +547,26 @@ class BLEGapIdKey(object):
     def __str__(self):
         return "irk({0.irk}) id_addr_info({0.id_addr_info})".format(self)
 
+class BLEGapDhKey(object):
+    KEY_LENGTH = driver.BLE_GAP_LESC_DHKEY_LEN
+
+    def __init__(self, key=b""):
+        self.key = key
+
+    def to_c(self):
+        key = driver.ble_gap_lesc_dhkey_t()
+        key.key = util.list_to_uint8_array(self.key).cast()
+        return key
+
+    @classmethod
+    def from_c(cls, key):
+        key_data = bytearray(util.uint8_array_to_list(key.key, cls.KEY_LENGTH))
+        return cls(key_data)
+
+    def __repr__(self):
+        if not self.key:
+            return ""
+        return binascii.hexlify(self.key).decode("ascii")
 
 class BLEGapEncInfo(object):
     def __init__(self, ltk, auth, lesc, ltk_len):
@@ -2096,6 +2115,16 @@ class BLEDriver(object):
             self.rpc_adapter, conn_handle, enc_info, id_info, sign_info
         )
 
+    @NordicSemiErrorCheck
+    @wrapt.synchronized(api_lock)
+    def ble_gap_lesc_dhkey_reply(self, conn_handle, dh_key):
+        """ Reply with an LE Secure Connections DHKey.
+        """
+        assert isinstance(dh_key, BLEGapDhKey)
+
+        key = dh_key.to_c()
+        return driver.sd_ble_gap_lesc_dhkey_reply(self.rpc_adapter, conn_handle, key)
+
     @wrapt.synchronized(api_lock)
     def ble_gap_conn_sec_get(self, conn_handle):
         """ Obtain connection security level.
@@ -2391,6 +2420,11 @@ class BLEDriver(object):
     def ble_event_handler_sync(self, _adapter, ble_event):
 
         try:
+            logger.info(
+                "Received BLE event id: 0x{:02X}".format(
+                    ble_event.header.evt_id
+                )
+            )
             evt_id = BLEEvtID(ble_event.header.evt_id)
         except Exception:
             logger.error(
@@ -2568,25 +2602,15 @@ class BLEDriver(object):
                         rssi=rssi_changed_evt.rssi,
                     )
 
-            elif evt_id == BLEEvtID.gap_evt_phy_update_request:
-                requested_phy_update = ble_event.evt.gap_evt.params.phy_update_request
+            elif evt_id == BLEEvtID.gap_evt_lesc_dhkey_request:
+                lesc_dhkey_request = ble_event.evt.gap_evt.params.lesc_dhkey_request
 
                 for obs in self.observers:
-                    obs.on_gap_evt_phy_update_request(
+                    obs.on_gap_evt_lesc_dhkey_request(
                         ble_driver=self,
                         conn_handle=ble_event.evt.common_evt.conn_handle,
-                        peer_preferred_phys=BLEGapPhys.from_c(requested_phy_update.peer_preferred_phys)
-                    )
-            elif evt_id == BLEEvtID.gap_evt_phy_update:
-                updated_phy = ble_event.evt.gap_evt.params.phy_update
-
-                for obs in self.observers:
-                    obs.on_gap_evt_phy_update(
-                        ble_driver=self,
-                        conn_handle=ble_event.evt.common_evt.conn_handle,
-                        status=BLEHci(updated_phy.status),
-                        tx_phy=updated_phy.tx_phy,
-                        rx_phy=updated_phy.rx_phy,
+                        dhkey = util.uint8_array_to_list(lesc_dhkey_request.p_pk_peer.pk, 64),
+                        oob = lesc_dhkey_request.oobd_req
                     )
 
             elif evt_id == BLEEvtID.gattc_evt_write_rsp:
