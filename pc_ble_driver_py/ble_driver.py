@@ -389,10 +389,10 @@ class BLEGapConnSec(object):
 class BLEGapConnParams(object):
     def __init__(
         self,
-        min_conn_interval_ms,
-        max_conn_interval_ms,
-        conn_sup_timeout_ms,
-        slave_latency,
+        min_conn_interval_ms: int,
+        max_conn_interval_ms: int,
+        conn_sup_timeout_ms: int,
+        slave_latency: int,
     ):
         self.min_conn_interval_ms = min_conn_interval_ms
         self.max_conn_interval_ms = max_conn_interval_ms
@@ -605,7 +605,7 @@ class BLEGapMasterId(object):
 
 
 class BLEGapSecKDist(object):
-    def __init__(self, enc, id, sign, link):
+    def __init__(self, enc : int, id : int, sign : int, link : int):
         self.enc = enc
         self.id = id
         self.sign = sign
@@ -630,16 +630,16 @@ class BLEGapSecKDist(object):
 class BLEGapSecParams(object):
     def __init__(
         self,
-        bond,
-        mitm,
-        lesc,
-        keypress,
-        io_caps,
-        oob,
-        min_key_size,
-        max_key_size,
-        kdist_own,
-        kdist_peer,
+        bond : int,
+        mitm : int,
+        lesc : int,
+        keypress : int,
+        io_caps : BLEGapIOCaps,
+        oob : int,
+        min_key_size : int,
+        max_key_size : int,
+        kdist_own : BLEGapSecKDist,
+        kdist_peer : BLEGapSecKDist,
     ):
         assert isinstance(kdist_own, BLEGapSecKDist), "Invalid argument type"
         assert isinstance(kdist_peer, BLEGapSecKDist), "Invalid argument type"
@@ -920,7 +920,7 @@ class BLEGattExecWriteFlag(Enum):
 
 
 class BLEGattcWriteParams(object):
-    def __init__(self, write_op, flags, handle, data, offset):
+    def __init__(self, write_op : BLEGattWriteOperation, flags : BLEGattExecWriteFlag, handle, data, offset):
         assert isinstance(write_op, BLEGattWriteOperation), "Invalid argument type"
         assert isinstance(flags, BLEGattExecWriteFlag), "Invalid argument type"
         self.write_op = write_op
@@ -1259,7 +1259,7 @@ class BLEGattsCharMD(object):
 
 
 class BLEGapPhys(object):
-    def __init__(self, tx_phy, rx_phy):
+    def __init__(self, tx_phy : int, rx_phy : int):
         self.tx_phy = tx_phy
         self.rx_phy = rx_phy
 
@@ -1563,10 +1563,10 @@ class BLEConfigGatts(BLEConfigBase):
 class BLEGapDataLengthParams(object):
     def __init__(
         self,
-        max_tx_octets=251,
-        max_rx_octets=251,
-        max_tx_time_us=0,  # BLE_GAP_DATA_LENGTH_AUTO
-        max_rx_time_us=0,
+        max_tx_octets: int=251,
+        max_rx_octets: int=251,
+        max_tx_time_us: int=0,  # BLE_GAP_DATA_LENGTH_AUTO
+        max_rx_time_us: int=0,
     ):  # BLE_GAP_DATA_LENGTH_AUTO
         self.max_tx_octets = max_tx_octets
         self.max_rx_octets = max_rx_octets
@@ -1594,9 +1594,9 @@ class BLEGapDataLengthParams(object):
 class BLEGapDataLengthLimitation(object):
     def __init__(
         self,
-        tx_payload_limited_octets=0,
-        rx_payload_limited_octets=0,
-        tx_rx_time_limited_us=0,
+        tx_payload_limited_octets: int=0,
+        rx_payload_limited_octets: int=0,
+        tx_rx_time_limited_us: int=0,
     ):
         self.tx_payload_limited_octets = tx_payload_limited_octets
         self.rx_payload_limited_octets = rx_payload_limited_octets
@@ -1644,15 +1644,19 @@ class BLEDriver(object):
 
     def __init__(
         self,
-        serial_port,  # type: str
-        baud_rate=1000000,  # type: int
-        auto_flash=False,  # type: bool
-        retransmission_interval=300,  # type: int
-        response_timeout=1500,  # type: int
-        log_severity_level="info",  # type: str
+        serial_port : str,  # type: str
+        baud_rate: int=1000000,  # type: int
+        auto_flash: bool=False,  # type: bool
+        retransmission_interval: int=300,  # type: int
+        response_timeout: int=1500,  # type: int
+        log_severity_level: str="info",  # type: str
     ):
         super(BLEDriver, self).__init__()
         self.observers = list()  # type: List[BLEDriverObserver]
+
+        global nrf_sd_ble_api_ver
+        nrf_sd_ble_api_ver = config.sd_api_ver_get()
+
 
         if auto_flash:
             try:
@@ -1873,7 +1877,7 @@ class BLEDriver(object):
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
-    def ble_gap_addr_set(self, gap_addr):
+    def ble_gap_addr_set(self, gap_addr : BLEGapAddr):
         """ Sets the given address
             :param gap_addr: Address to be set
             :type gap_addr: BLEGapAddr
@@ -1904,7 +1908,7 @@ class BLEDriver(object):
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
-    def ble_gap_privacy_set(self, privacy_params):
+    def ble_gap_privacy_set(self, privacy_params : BLEGapPrivacyParams):
         """ Sets the given privacy parameters.
             :param privacy_params: Privacy parameters
             :type privacy_params: BLEGapPrivacyParams
@@ -1915,7 +1919,7 @@ class BLEDriver(object):
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
-    def ble_gap_adv_start(self, adv_params=None, tag=0):
+    def ble_gap_adv_start(self, adv_params: BLEGapAdvParams = None, tag=0):
         """ Starts advertising with the given parameters. If none given, will use the default
             :param adv_params: Advertising parameters
             :type adv_params: BLEGapAdvParams
@@ -1953,7 +1957,7 @@ class BLEDriver(object):
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
-    def ble_gap_scan_start(self, scan_params=None):
+    def ble_gap_scan_start(self, scan_params: BLEGapScanParams = None):
         """ Starts scanning with the given parameters. If none given, will use the default
             :param scan_params: Advertising parameters
             :type scan_params: BLEGapScanParams
@@ -1972,7 +1976,7 @@ class BLEDriver(object):
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
-    def ble_gap_connect(self, address, scan_params=None, conn_params=None, tag=0):
+    def ble_gap_connect(self, address: BLEGapAddr, scan_params: BLEGapScanParams = None, conn_params: BLEGapConnParams = None, tag=0):
         """ Initiates a connection to a peripheral peer with the specified connection parameters, or uses the default
             connection parameters if not specified. The connection will not be complete until the returned waitable
             either times out or reports the newly connected peer
@@ -2050,7 +2054,7 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_sec_params_reply(
-        self, conn_handle, sec_status, sec_params, own_keys=None, peer_keys=None
+        self, conn_handle, sec_status : BLEGapSecStatus, sec_params, own_keys=None, peer_keys=None
     ):
         """ Reply with Security Parameters.
         """
@@ -2109,7 +2113,7 @@ class BLEDriver(object):
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
-    def ble_gap_encrypt(self, conn_handle, master_id, enc_info):
+    def ble_gap_encrypt(self, conn_handle, master_id : BLEGapMasterId, enc_info : BLEGapEncInfo):
         """ Initiate encryption procedure.
             :type master_id: BLEGapMasterId
             :type enc_info: BLEGapEncInfo
@@ -2123,8 +2127,7 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gap_data_length_update(
-        self, conn_handle, data_length_params, data_length_limitation
-    ):
+        self, conn_handle, data_length_params, data_length_limitation ):
         """ Initiate to a Data Length Update Procedure.
         """
         assert isinstance(data_length_params, (BLEGapDataLengthParams, type(None)))
@@ -2162,7 +2165,7 @@ class BLEDriver(object):
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
-    def ble_gap_phy_update(self, conn_handle, gap_phys):
+    def ble_gap_phy_update(self, conn_handle, gap_phys : BLEGapPhys):
         """ Initiate PHY Update procedure
         """
         assert isinstance(gap_phys, BLEGapPhys)
@@ -2176,7 +2179,7 @@ class BLEDriver(object):
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
-    def ble_vs_uuid_add(self, uuid_base):
+    def ble_vs_uuid_add(self, uuid_base : BLEUUIDBase):
         assert isinstance(uuid_base, BLEUUIDBase), "Invalid argument type"
         uuid_type = driver.new_uint8()
 
@@ -2189,7 +2192,7 @@ class BLEDriver(object):
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
-    def ble_gattc_write(self, conn_handle, write_params):
+    def ble_gattc_write(self, conn_handle, write_params : BLEGattcWriteParams):
         assert isinstance(write_params, BLEGattcWriteParams), "Invalid argument type"
         return driver.sd_ble_gattc_write(
             self.rpc_adapter, conn_handle, write_params.to_c()
@@ -2250,7 +2253,7 @@ class BLEDriver(object):
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
-    def ble_gatts_service_add(self, service_type, uuid, service_handle):
+    def ble_gatts_service_add(self, service_type, uuid: BLEUUID, service_handle: BLEGattHandle):
         assert isinstance(service_handle, BLEGattHandle)
         assert isinstance(uuid, BLEUUID)
         handle = driver.new_uint16()
@@ -2265,8 +2268,7 @@ class BLEDriver(object):
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
     def ble_gatts_characteristic_add(
-        self, service_handle, char_md, attr_char_value, char_handle
-    ):
+        self, service_handle, char_md, attr_char_value, char_handle: BLEGattsCharHandles):
         assert isinstance(char_handle, BLEGattsCharHandles), "Invalid argument type"
         handles = driver.ble_gatts_char_handles_t()
         char_md = char_md.to_c()
@@ -2293,7 +2295,7 @@ class BLEDriver(object):
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(api_lock)
-    def ble_gatts_hvx(self, conn_handle, hvx_params):
+    def ble_gatts_hvx(self, conn_handle, hvx_params: BLEGattsHVXParams):
         assert isinstance(hvx_params, BLEGattsHVXParams), "Invalid argument type"
         hvx_params = hvx_params.to_c()
         return driver.sd_ble_gatts_hvx(self.rpc_adapter, conn_handle, hvx_params)
